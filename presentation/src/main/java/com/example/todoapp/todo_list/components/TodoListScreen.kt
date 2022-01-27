@@ -7,25 +7,50 @@ import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.domain.utils.TodoState
+import com.example.todoapp.todo_list.TodoListEvent
+import com.example.todoapp.todo_list.TodoListViewModel
 import com.example.todoapp.ui.theme.Black100
-import com.example.todoapp.ui.theme.TodoAppTheme
 import com.example.todoapp.ui.theme.Yellow400
 import com.example.todoapp.ui.theme.gradientBackground
+import com.example.todoapp.utils.UiEvent
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.collect
 
+@ExperimentalCoroutinesApi
 @Composable
-fun TodoList() {
+fun TodoListScreen(
+    onNavigate: (UiEvent.Navigate) -> Unit,
+    viewModel: TodoListViewModel = hiltViewModel()
+) {
     val scaffoldState = rememberScaffoldState()
+    val state = viewModel.state.collectAsState(initial = TodoState.Loading).value
+
+    LaunchedEffect(Unit) {
+        viewModel.getTodos()
+        viewModel.channel.collect { event ->
+            when (event) {
+                is UiEvent.Navigate -> onNavigate(event)
+                else -> Unit
+            }
+        }
+    }
+
     Scaffold(
         scaffoldState = scaffoldState,
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { },
+                onClick = {
+                    viewModel.onEvent(TodoListEvent.OnNewTodo)
+                },
                 contentColor = Black100,
                 backgroundColor = Yellow400
             ) {
@@ -52,21 +77,17 @@ fun TodoList() {
                         .padding(bottom = 16.dp)
                 )
                 Divider(color = Color.Black.copy(alpha = 0.6f))
-                LazyColumn() {
-                    items(items = listOf("", "")) {
-                        TodoItem()
-                        Divider(color = Color.Black.copy(alpha = 0.6f))
+                if (state is TodoState.Success) {
+                    LazyColumn() {
+                        items(items = state.data) {
+                            TodoItem()
+                            Divider(color = Color.Black.copy(alpha = 0.6f))
+                        }
                     }
+                } else if (state is TodoState.Empty) {
+                    EmptyList()
                 }
             }
         }
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun DefaultPreviewTodoList() {
-    TodoAppTheme {
-        TodoList()
     }
 }

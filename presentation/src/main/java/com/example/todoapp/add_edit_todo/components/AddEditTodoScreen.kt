@@ -3,26 +3,54 @@ package com.example.todoapp.add_edit_todo.components
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.example.todoapp.ui.theme.*
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.domain.entity.Todo
+import com.example.domain.utils.TodoState
+import com.example.todoapp.add_edit_todo.AddEditTodoEvent
+import com.example.todoapp.add_edit_todo.AddEditTodoViewModel
+import com.example.todoapp.ui.theme.Black500
+import com.example.todoapp.ui.theme.LightGray
+import com.example.todoapp.ui.theme.Yellow400
+import com.example.todoapp.ui.theme.gradientBackground
+import com.example.todoapp.utils.UiEvent
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.collect
 
+@ExperimentalCoroutinesApi
 @Composable
-fun AddEditTodoScreen() {
+fun AddEditTodoScreen(
+    onPopBackStack: () -> Unit,
+    viewModel: AddEditTodoViewModel = hiltViewModel()
+) {
     val title = remember { mutableStateOf(TextFieldValue("")) }
     val description = remember { mutableStateOf(TextFieldValue("")) }
     val isChecked = remember { mutableStateOf(false) }
+
+    val todo = viewModel.state.collectAsState(initial = TodoState.Empty).value
+    if (todo is TodoState.Success) {
+        title.value = TextFieldValue(todo.data.title)
+        description.value = TextFieldValue(todo.data.description)
+        isChecked.value = todo.data.isDone
+    }
+
+    LaunchedEffect(Unit) {
+        viewModel.channel.collect { event ->
+            when (event) {
+                is UiEvent.PopBackStack -> onPopBackStack()
+                else -> Unit
+            }
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -65,9 +93,34 @@ fun AddEditTodoScreen() {
         }
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround) {
             Button(
-                onClick = {},
+                onClick = {
+                    when (todo) {
+                        is TodoState.Empty -> viewModel.onEvent(
+                            AddEditTodoEvent.AddTodo(
+                                Todo(
+                                    title = title.value.text,
+                                    description = description.value.text,
+                                    isDone = isChecked.value,
+                                    limitDate = ""
+                                )
+                            )
+                        )
+                        is TodoState.Success -> viewModel.onEvent(
+                            AddEditTodoEvent.EditTodo(
+                                Todo(
+                                    id = todo.data.id,
+                                    title = title.value.text,
+                                    description = description.value.text,
+                                    isDone = isChecked.value,
+                                    limitDate = ""
+                                )
+                            )
+                        )
+                        else -> Unit
+                    }
+                },
                 content = {
-                    Text(text = "ADD")
+                    Text(text = if (todo is TodoState.Empty) "Add" else "Update")
                 },
                 colors = ButtonDefaults.buttonColors(
                     backgroundColor = Yellow400,
@@ -80,22 +133,26 @@ fun AddEditTodoScreen() {
                 ),
                 modifier = Modifier.width(100.dp)
             )
-            Button(
-                onClick = {},
-                elevation = ButtonDefaults.elevation(
-                    defaultElevation = 12.dp,
-                    pressedElevation = 16.dp,
-                    disabledElevation = 0.dp
-                ),
-                content = {
-                    Text(text = "REMOVE")
-                },
-                colors = ButtonDefaults.buttonColors(
-                    backgroundColor = MaterialTheme.colors.error,
-                    contentColor = Black500
-                ),
-                modifier = Modifier.width(100.dp)
-            )
+            if (todo is TodoState.Success) {
+                Button(
+                    onClick = {
+                        viewModel.onEvent(AddEditTodoEvent.DeleteTodo(todo.data))
+                    },
+                    elevation = ButtonDefaults.elevation(
+                        defaultElevation = 12.dp,
+                        pressedElevation = 16.dp,
+                        disabledElevation = 0.dp
+                    ),
+                    content = {
+                        Text(text = "REMOVE")
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        backgroundColor = MaterialTheme.colors.error,
+                        contentColor = Black500
+                    ),
+                    modifier = Modifier.width(100.dp)
+                )
+            }
         }
     }
 }
@@ -129,12 +186,4 @@ fun InputText(
             textColor = Color.White,
         )
     )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun DefaultPreviewTodoAddEdit() {
-    TodoAppTheme {
-        AddEditTodoScreen()
-    }
 }

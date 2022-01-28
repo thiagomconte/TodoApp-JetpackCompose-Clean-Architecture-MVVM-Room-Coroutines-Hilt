@@ -79,8 +79,10 @@ fun TodoListScreen(
                 Divider(color = Color.Black.copy(alpha = 0.6f))
                 if (state is TodoState.Success) {
                     LazyColumn() {
-                        items(items = state.data) {
-                            TodoItem()
+                        items(items = state.data) { data ->
+                            TodoItem(data) {
+                                viewModel.onEvent(TodoListEvent.OnTodoClick(it.id))
+                            }
                             Divider(color = Color.Black.copy(alpha = 0.6f))
                         }
                     }

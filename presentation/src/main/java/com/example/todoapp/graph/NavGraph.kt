@@ -15,7 +15,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 @Composable
 fun NavGraph() {
     val navController = rememberNavController()
-    NavHost(navController = navController, startDestination = Constants.Routes.ADD_EDIT) {
+    NavHost(navController = navController, startDestination = Constants.Routes.TODO_LIST) {
         composable(route = Constants.Routes.TODO_LIST) {
             TodoListScreen(onNavigate = { event ->
                 navController.navigate(event.route)
@@ -30,7 +30,11 @@ fun NavGraph() {
                 }
             )
         ) {
-            AddEditTodoScreen()
+            AddEditTodoScreen(
+                onPopBackStack = {
+                    navController.popBackStack()
+                }
+            )
         }
     }
 }

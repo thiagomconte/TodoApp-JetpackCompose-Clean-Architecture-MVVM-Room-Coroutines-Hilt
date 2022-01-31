@@ -45,7 +45,9 @@ fun AddEditTodoScreen(
     LaunchedEffect(Unit) {
         viewModel.channel.collect { event ->
             when (event) {
-                is UiEvent.PopBackStack -> onPopBackStack()
+                is UiEvent.PopBackStack -> {
+                    onPopBackStack()
+                }
                 else -> Unit
             }
         }
